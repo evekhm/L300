@@ -1,5 +1,5 @@
 #! /bin/bash
-set -e # Exit if error is detected during pipeline execution
+#set -e # Exit if error is detected during pipeline execution
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
