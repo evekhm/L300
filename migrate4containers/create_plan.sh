@@ -1,11 +1,13 @@
 #! /bin/bash
+set -e # Exit if error is detected during pipeline execution
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 #1. Create a processing cluster
 gcloud container clusters create $CLUSTER  --project=$PROJECT_ID \
   --zone="$ZONE" --machine-type e2-standard-4   --image-type ubuntu_containerd \
   --num-nodes "$NUM_NODES" --enable-stackdriver-kubernetes   \
-  --subnetwork "projects/$PROJECT_ID/regions/region/subnetworks/default"
+  --subnetwork "projects/$PROJECT_ID/regions/$REGION/subnetworks/default"
 
 #2. Install Migrate to Containers
 
