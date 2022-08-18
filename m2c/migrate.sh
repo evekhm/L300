@@ -46,6 +46,9 @@ migctl setup install --json-key="$SA_INSTALL".json --gcp-project "$PROJECT_ID" -
 echo "Validating Migration..."
 migctl doctor
 
+echo "check in another terminal on progress by running"
+echo "migctl doctor"
+read -p "Hit ENTER to continue"
 #3 Migrating the VM
 
 #Create a service account for Compute Engine source migrations
@@ -75,7 +78,7 @@ migctl source create ce "$SRC_NAME" --project "${PROJECT_ID}" --json-key="$SA_MI
 
 #Create a migration plan
 echo "Creating the migration plan..."
-migctl migration create "$MIGRATION_JOB" --source "$SRC_NAME"   --vm-id "$SRC_VM" --type linux-system-container
+migctl migration create "$MIGRATION_JOB" --source "$SRC_NAME"   --vm-id "$SRC_VM_ID" --type linux-system-container
 
 echo "check in another terminal on progress by running"
 echo " migctl migration status $MIGRATION_JOB"
