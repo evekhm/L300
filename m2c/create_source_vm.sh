@@ -1,4 +1,4 @@
-gcloud compute  instances create   $SRC_VM  --zone=us-east1-d --machine-type=e2-standard-2 \
+gcloud compute  instances create   "$SRC_VM_ID"  --zone=us-east1-d --machine-type=e2-standard-2 \
   --subnet=default --scopes="cloud-platform"   --tags=http-server,https-server \
   --image=ubuntu-minimal-1604-xenial-v20210119a   --image-project=ubuntu-os-cloud \
   --boot-disk-size=10GB --boot-disk-type=pd-standard   --boot-disk-device-name="$SRC_VM" \

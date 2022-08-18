@@ -2,6 +2,11 @@
 #set -e # Exit if error is detected during pipeline execution
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export WORKLOAD_POOL=${PROJECT_ID}.svc.id.goog
+export CTX_1=gke_${PROJECT_ID}_us-central1-a_cymbal-bank-prod
+export CTX_2=gke_${PROJECT_ID}_us-central1-a_cymbal-bank-dev
+export CTX_3=gke_${PROJECT_ID}_us-central1-a_m4a-processing
+export CTX_4=gke_${PROJECT_ID}_us-central1-a_cymbal-monolith-cluster
 
 #1. Create a processing cluster
 echo "Creating a processing cluster..."
@@ -122,3 +127,15 @@ migctl migration get-artifacts "$MIGRATION_JOB"
 # Final step: Deployment
 echo "-----------------------------------------------------"
 echo "Proceeding towards deployment...."
+
+gcloud container clusters get-credentials cymbal-monolith-cluster --zone $ZONE --project ${PROJECT_ID}
+kubectl apply -f deployment_spec.yaml --context=${CTX_4}
+echo "replace all ledger service FQDNS with just  ledgermonolith-service:8080"
+read -p "Hit ENTER to edit the config map"
+kubectl edit configmap service-api-config --context=${CTX_4}
+
+
+read -p "Hit ENTER to continue"
+kubectl rollout restart deployment -n default --context=${CTX_4}
+
+echo "PART 1 IS DONE!!!!"
