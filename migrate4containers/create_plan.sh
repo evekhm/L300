@@ -65,6 +65,7 @@ migctl migration status "$MIGRATION_JOB"
 #Review the migration plan
 migctl migration get "$MIGRATION_JOB"
 
+echo "Below is the K8s CRD for migration object"
 cat "$MIGRATION_JOB".yaml
 
 echo "To update the plan run: migctl migration update $MIGRATION_JOB"
