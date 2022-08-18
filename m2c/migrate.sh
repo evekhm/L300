@@ -8,6 +8,10 @@ export CTX_2=gke_${PROJECT_ID}_us-central1-a_cymbal-bank-dev
 export CTX_3=gke_${PROJECT_ID}_us-central1-a_m4a-processing
 export CTX_4=gke_${PROJECT_ID}_us-central1-a_cymbal-monolith-cluster
 
+# Stop VM
+echo "Stopping VM $SRC_VM_ID ..."
+gcloud compute instances stop $SRC_VM_ID
+
 #1. Create a processing cluster
 echo "Creating a processing cluster..."
 gcloud container clusters create "$CLUSTER"  --project="$PROJECT_ID" \
