@@ -46,16 +46,14 @@ function enable_project_apis() {
     gcloud org-policies reset constraints/iam.disableServiceAccountKeyCreation --project $PROJECT_ID
   fi
 }
-enable_project_apis
 
-setup_network(){
+function setup_network(){
   local NETWORK=default
   network=$(gcloud compute networks list --filter="name=(\"$NETWORK\" )" --format='get(NAME)' 2>/dev/null)
   if [ -z "$network" ]; then
       gcloud compute networks create $NETWORK --project="$PROJECT_ID" --subnet-mode=auto
   fi
 }
-setup_network
 
 function create_cluster() {
   NAME=$1
@@ -72,7 +70,6 @@ function create_cluster() {
    --workload-pool=${WORKLOAD_POOL}
 }
 
-
 function t9_create_cloud_src_repo(){
   local TASK="Task 9"
   print "$TASK: Create a Cloud Source Repository for Cymbal Bank"
@@ -83,6 +80,9 @@ function t9_create_cloud_src_repo(){
   # and then add your repository as a remote and push your local repository into that remote
   gcloud source repos create $REPO
 
+  if [ -d bank-of-anthos ]; then
+    rm -rf bank-of-anthos
+  fi
   git clone https://github.com/GoogleCloudPlatform/bank-of-anthos.git
   cd bank-of-anthos || exit
   git reset --hard 802d39e17c6bc7ddfe87dde82b94af9aca0e7397
@@ -345,7 +345,6 @@ function create_sa(){
   --iam-account="${CONNECT_SA}"@"${PROJECT_ID}".iam.gserviceaccount.com
 }
 
-
 function register_prod_w_hub(){
   local CLUSTER=$1
     gcloud container hub memberships register "$CLUSTER" \
@@ -545,6 +544,8 @@ EOF
 }
 
 printh "Part 2: Create CI/CD Pipelines for Production and Development"
+enable_project_apis
+setup_network
 t9_create_cloud_src_repo
 t10_deploy_gke_prod
 t11_create_cloud_build_trigger_deploy_to_prod
