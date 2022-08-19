@@ -14,6 +14,9 @@ check_task(){
   read -p "${COLOR_BLUE}check the progress on $TASK and hit ENTER when it is ${RESET} ${COLOR_GREEN}green ${RESET}"
 }
 
+print(){
+  echo "${COLOR_CYAN}$1${RESET}"
+}
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 K8S="$DIR"/bank-of-anthos
 source "$DIR"/SET
@@ -91,7 +94,7 @@ function t9_create_cloud_src_repo(){
 
 function t10_deploy_gke_prod(){
   local TASK="Task 10"
-  echo "$TASK: Deploy a Kubernetes Engine Cluster for Cymbal Bank production code"
+  print "$TASK: Deploy a Kubernetes Engine Cluster for Cymbal Bank production code"
   #Deploy a two node Kubernetes Engine Cluster called cymbal-bank-prod in us-central1-a.
   #create_cluster "$CLUSTER_PROD" TODO
 
@@ -225,7 +228,7 @@ EOF
 
 function t11_create_cloud_build_trigger_deploy_to_prod(){
   local TASK="Task 10"
-  echo "$TASK: Create a Cloud Build template and trigger for deployment to the production cluster"
+  print "$TASK: Create a Cloud Build template and trigger for deployment to the production cluster"
 
   function cloud_build_sa(){
     #You must ensure that the Cloud Build Service Account has been bound to the roles/container.admin role in your project.
@@ -278,7 +281,7 @@ EOF
 
 function t12_deploy_gke_dev(){
   local TASK="Task 12"
-  echo "$TASK: Deploy a Kubernetes Engine Cluster for Cymbal Bank development code"
+  print "$TASK: Deploy a Kubernetes Engine Cluster for Cymbal Bank development code"
   # Deploy another two node Kubernetes Engine Cluster called cymbal-bank-dev in us-central1-a
   # and manually deploy an initial version of the Bank of Anthos application
   # to ensure it is working correctly.
@@ -291,7 +294,7 @@ function t12_deploy_gke_dev(){
 
 function t13_create_cloud_build_trigger_deploy_to_dev(){
   local TASK="Task 13"
-  echo "$TASK: Create a Cloud Build template and trigger for deployment to the development cluster"
+  print "$TASK: Create a Cloud Build template and trigger for deployment to the development cluster"
 
   #Create a new branch called cymbal-dev. In this branch, modify the
   # Bank of Anthos application to display the new Cymbal Bank logo in the header.
@@ -347,7 +350,7 @@ function register_prod_w_hub(){
 
 function t14_create_sa_register_prod_w_hub(){
   local TASK="Task 14"
-  echo "$TASK: Create a Service account and register the production cluster with Container Hub"
+  print "$TASK: Create a Service account and register the production cluster with Container Hub"
   create_sa
   register_prod_w_hub "$CLUSTER_PROD"
   #read -p "check the progress on $TASK and hit ENTER when it is green"
@@ -356,7 +359,7 @@ function t14_create_sa_register_prod_w_hub(){
 
 function t17_register_dev_w_hub(){
   local TASK="Task 17"
-  echo "$TASK: Register the development cluster with Container Hub"
+  print "$TASK: Register the development cluster with Container Hub"
   register_prod_w_hub "$CLUSTER_PROD"
 #  read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
@@ -379,7 +382,7 @@ function install_asm_to_gke(){
 
 function t15_install_asm_to_prod(){
   local TASK="Task 15"
-  echo "$TASK: Install Anthos Service Mesh onto the production cluster"
+  print "$TASK: Install Anthos Service Mesh onto the production cluster"
   install_asm
   install_asm_to_gke "${CLUSTER_PROD}"
 #  read -p "check the progress on $TASK and hit ENTER when it is green"
@@ -388,7 +391,7 @@ function t15_install_asm_to_prod(){
 
 function t18_install_asm_to_dev(){
   local TASK="Task 18"
-  echo "$TASK: Install Anthos Service Mesh onto the development cluster and configure namespaces"
+  print "$TASK: Install Anthos Service Mesh onto the development cluster and configure namespaces"
   install_asm_to_gke "${CLUSTER_DEV}"
   kubectl label namespace default  istio-injection- istio.io/rev=asm-181-5 --overwrite --context=${CTX_2}
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
@@ -412,7 +415,7 @@ function t16_conf_ns_for_sidecar_prod(){
 
 function t19_firewall_4_istio_traffic(){
   local TASK="Task 19"
-  echo "$TASK: Ensure that you have a firewall rule that allows Istio traffic between clusters"
+  print "$TASK: Ensure that you have a firewall rule that allows Istio traffic between clusters"
   # Create a firewall rule called allow-istio that allows Istio service discovery
   # and control plane traffic between your production and development clusters.
   POD_IP_CIDR_1=`gcloud container clusters describe $CLUSTER_PROD --zone $ZONE \
@@ -430,7 +433,7 @@ function t19_firewall_4_istio_traffic(){
 
 function t16_conf_ns_for_sidecar_prod(){
   local TASK="Task 16"
-  echo "$TASK: Configure namespace labels for sidecar injection in the production cluster"
+  print "$TASK: Configure namespace labels for sidecar injection in the production cluster"
   kubectl label namespace default  istio-injection- istio.io/rev=asm-181-5 --overwrite --context=${CTX_1}
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
     All namespaces that required sidecar injection must have an istio.io/rev label
@@ -442,7 +445,7 @@ function t16_conf_ns_for_sidecar_prod(){
 
 function t20_create_secrets(){
   local TASK="Task 20"
-  echo "$TASK: Create and apply remote secrets for both clusters"
+  print "$TASK: Create and apply remote secrets for both clusters"
   # Create a secret with credentials to allow Istio to access remote Kubernetes apiservers
   # These mutual secrets allow the control plane on the production cluster to
   # perform service discovery and other tasks on the development cluster and vice-versa.
@@ -454,7 +457,7 @@ function t20_create_secrets(){
 
 function t21_restart_all_pods(){
   local TASK="Task 21"
-  echo "$TASK:  Restart all pods to trigger sidecar injection"
+  print "$TASK:  Restart all pods to trigger sidecar injection"
   kubectl delete pods --all -n default --context=${CTX_1}
   kubectl delete pods --all -n default --context=${CTX_2}
 #  read -p "check the progress on $TASK and hit ENTER when it is green"
@@ -463,7 +466,7 @@ function t21_restart_all_pods(){
 
 function t22_create_deploy_istio_gw_vs_prod(){
   local TASK="Task 22"
-  echo "$TASK:   Create and deploy an Istio Gateway and Virtual Service on the production cluster"
+  print "$TASK:   Create and deploy an Istio Gateway and Virtual Service on the production cluster"
   # create a dedicated namespace for the Istio Ingress gateway on the production cluster called gateway-namespace
   kubectl apply -f "$K8S"/istio-manifests/frontend-ingress.yaml --context=${CTX_1}
 
@@ -501,7 +504,7 @@ EOF
 
 function t23_update_istio_rebalance_weights(){
   local TASK="Task 23"
-  echo "$TASK:  Update the Istio virtual service definition to rebalance
+  print "$TASK:  Update the Istio virtual service definition to rebalance
     frontend traffic between production and development"
 
   # Configure your VirtualService to distribute 75% of traffic to
@@ -536,14 +539,14 @@ EOF
   check_task "$TASK"
 }
 
-echo "Part 2: Create CI/CD Pipelines for Production and Development"
+print "Part 2: Create CI/CD Pipelines for Production and Development"
 #t9_create_cloud_src_repo TODO
 t10_deploy_gke_prod
 t11_create_cloud_build_trigger_deploy_to_prod
 t12_deploy_gke_dev
 t13_create_cloud_build_trigger_deploy_to_dev
 
-echo "Part 3: Deploy and Configure Anthos Service Mesh"
+print "Part 3: Deploy and Configure Anthos Service Mesh"
 t14_create_sa_register_prod_w_hub
 t15_install_asm_to_prod
 t16_conf_ns_for_sidecar_prod
