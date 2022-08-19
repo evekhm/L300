@@ -268,10 +268,10 @@ steps:
 EOF
 
   echo "Pushing cloudbuild.yaml..."
-  cat cloudbuild.yaml
+  cat "$DIR"/cloudbuild.yaml
   # create a global (non-regional) Cloud Build Trigger that is fired whenever
   # there's a push to the main branch for your repository.
-  gcloud beta builds triggers create cloud-source-repositories --repo="$REPO" --branch-pattern=master  --build-config=cloudbuild.yaml
+  gcloud beta builds triggers create cloud-source-repositories --repo="$REPO" --branch-pattern=master  --build-config="$DIR"/cloudbuild.yaml
   git add .
   git commit -m "pushing cloudbuild.yaml"
 
