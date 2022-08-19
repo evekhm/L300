@@ -371,7 +371,7 @@ function t17_register_dev_w_hub(){
 }
 
 function install_asm(){
-  curl https://storage.googleapis.com/csm-artifacts/asm/install_asm_1.10 > install_asm
+  curl https://storage.googleapis.com/csm-artifacts/asm/install_asm_1.11 > install_asm
   chmod +x install_asm
 }
 
