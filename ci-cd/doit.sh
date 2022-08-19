@@ -21,6 +21,7 @@ print(){
 printh(){
   echo "${COLOR_YELLOW}$1${RESET}"
 }
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 K8S="$DIR"/bank-of-anthos
 source "$DIR"/SET
@@ -29,6 +30,7 @@ function enable_project_apis() {
   APIS="compute.googleapis.com \
     sourcerepo.googleapis.com \
     container.googleapis.com \
+    gkehub.googleapis.com \
     cloudbuild.googleapis.com"
   echo "Enabling APIs on the project..."
   gcloud services enable $APIS
@@ -41,9 +43,9 @@ function enable_project_apis() {
     gcloud org-policies reset constraints/compute.vmExternalIpAccess --project $PROJECT_ID
     gcloud org-policies reset  constraints/compute.requireShieldedVm --project $PROJECT_ID
     gcloud org-policies reset  constraints/compute.requireOsLogin --project $PROJECT_ID
+    gcloud org-policies reset constraints/iam.disableServiceAccountKeyCreation --project $PROJECT_ID
   fi
 }
-
 enable_project_apis
 
 setup_network(){
@@ -369,7 +371,7 @@ function t17_register_dev_w_hub(){
 }
 
 function install_asm(){
-  curl https://storage.googleapis.com/csm-artifacts/asm/install_asm_1.8 > install_asm
+  curl https://storage.googleapis.com/csm-artifacts/asm/install_asm_1.10 > install_asm
   chmod +x install_asm
 }
 
