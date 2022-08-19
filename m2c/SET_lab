@@ -13,3 +13,4 @@ export SA_MIGRATE='m4a-ce-src'
 export MIGRATION_JOB='my-migration'
 export SRC_NAME='source-ce'
 export SRC_VM_ID='source-vm'
+export D_CLUSTER=$CLUSTER

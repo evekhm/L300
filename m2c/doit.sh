@@ -81,7 +81,7 @@ echo "Creating the migration plan..."
 migctl migration create "$MIGRATION_JOB" --source "$SRC_NAME"   --vm-id "$SRC_VM_ID" --type linux-system-container
 
 echo "check in another terminal on progress by running"
-echo " migctl migration status $MIGRATION_JOB"
+echo " watch migctl migration status $MIGRATION_JOB"
 read -p "Hit ENTER to continue"
 
 echo "Downloading the migration plan..."
@@ -91,58 +91,60 @@ read -p "Please wait. Press any key... "$'\n' -n1 -s
 echo "Below is the K8s CRD for migration object"
 cat "$MIGRATION_JOB".yaml
 
-#read -r -p "Do you want to update plan and add dataVolumes?  [y/N] " response
-#case "$response" in
-#    [yY][eE][sS]|[yY])
-#        do_something
-#        ;;
-#    *)
-#        do_something_else
-#        ;;
-#esac
-
 # Optional step : modify my-migration plan
-echo "(Optional) Modify the migration plan by editing my-migration.yaml:"
-
-read -p "Open a new terminal and run the command below if anything changed... "$'\n' -n1 -s
-echo "migctl migration update $MIGRATION_JOB --file $MIGRATION_JOB.yaml"
-
-read -p "Did migration update successfully? After confirming press key to continue.."$'\n' -n1 -s
+read -r -p "Do you want to update plan and add dataVolumes?  [y/N] " response
+case "$response" in
+    [yY][eE][sS]|[yY])
+        echo "Updating the $MIGRATION_JOB.yaml"
+        {
+          echo
+          echo dataVolumes:
+          echo "  - folders:"
+          echo "    - /var/lib/postgresql"
+        } >> "$MIGRATION_JOB".yaml
+        cat "$MIGRATION_JOB".yaml
+        read -p "Does the plan look correct? After confirming press key to continue.."$'\n' -n1 -s
+        migctl migration update $MIGRATION_JOB --file "$MIGRATION_JOB".yaml
+        read -p "Did migration update successfully? After confirming press key to continue.."$'\n' -n1 -s
+        ;;
+    *)
+        echo "Proceeding to next step"
+        ;;
+esac
 
 read -p "Ok to Proceed?. Press any key... "$'\n' -n1 -s
 
 # Execute the VM migration plan
-echo "Begin the VM migration: (Note this may take upto 10min)"
+echo "Begin the VM migration: (Note this may take upto 10min)..."
 migctl migration generate-artifacts "$MIGRATION_JOB"
 
 echo "Check the migration status:"
 migctl migration status "$MIGRATION_JOB" -v
-echo migctl migration status "$MIGRATION_JOB" -v
-read -p "Please wait. Press any key... "$'\n' -n1 -s
 
-echo "Check the migration status:"
+read -p "In a new terminal  run the command below and wait until it ends with Generate artifacts done... "$'\n' -n1 -s
 echo migctl migration status "$MIGRATION_JOB" -v
+read -p "Please wait till Artefacts are Generated. Press any key... "$'\n' -n1 -s
 
-read -p "Please wait for migration to complete. Press any key... "$'\n' -n1 -s
 
 #Deploying the migrated workload
 #Once the migration is complete, get the generated YAML artifacts
 echo "Getting generated artefacts for $MIGRATION_JOB..."
-migctl migration get-artifacts "$MIGRATION_JOB"
+migctl migration get-artifacts "$MIGRATION_JOB" --output-directory "$DIR"
+
 
 #-----------------------------------------------------------------------------------
 # Final step: Deployment
 echo "-----------------------------------------------------"
 echo "Proceeding towards deployment...."
 
-gcloud container clusters get-credentials cymbal-monolith-cluster --zone $ZONE --project ${PROJECT_ID}
-kubectl apply -f deployment_spec.yaml --context=${CTX_4}
-echo "replace all ledger service FQDNS with just  ledgermonolith-service:8080"
-read -p "Hit ENTER to edit the config map"
-kubectl edit configmap service-api-config --context=${CTX_4}
-
-
-read -p "Hit ENTER to continue"
-kubectl rollout restart deployment -n default --context=${CTX_4}
-
-echo "PART 1 IS DONE!!!!"
+gcloud container clusters get-credentials "$D_CLUSTER" --zone "$ZONE" --project "${PROJECT_ID}"
+kubectl apply -f "$DIR"/deployment_spec.yaml #--context=${CTX_4}
+#echo "replace all ledger service FQDNS with just  ledgermonolith-service:8080"
+#read -p "Hit ENTER to edit the config map"
+#kubectl edit configmap service-api-config --context=${CTX_4}
+#
+#
+#read -p "Hit ENTER to continue"
+#kubectl rollout restart deployment -n default --context=${CTX_4}
+#
+#echo "PART 1 IS DONE!!!!"
