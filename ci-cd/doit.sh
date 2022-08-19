@@ -65,7 +65,6 @@ function create_cluster() {
    --num-nodes 2 \
    --machine-type "n1-standard-4"  \
    --image-type "UBUNTU" \
-   --logging --monitoring \
    --network default \
    --subnetwork default \
    --workload-pool=${WORKLOAD_POOL}
@@ -74,7 +73,7 @@ function create_cluster() {
 
 function t9_create_cloud_src_repo(){
   local TASK="Task 9"
-  echo "$TASK: Create a Cloud Source Repository for Cymbal Bank"
+  print "$TASK: Create a Cloud Source Repository for Cymbal Bank"
 
   echo "Creating a Google Cloud source repository called $REPO..."
   #Create a Google Cloud source repository called cymbal-bank-repo.
