@@ -17,6 +17,10 @@ check_task(){
 print(){
   echo "${COLOR_CYAN}$1${RESET}"
 }
+
+printh(){
+  echo "${COLOR_YELLOW}$1${RESET}"
+}
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 K8S="$DIR"/bank-of-anthos
 source "$DIR"/SET
@@ -40,7 +44,7 @@ function enable_project_apis() {
   fi
 }
 
-#enable_project_apis TODO
+enable_project_apis
 
 setup_network(){
   local NETWORK=default
@@ -96,7 +100,7 @@ function t10_deploy_gke_prod(){
   local TASK="Task 10"
   print "$TASK: Deploy a Kubernetes Engine Cluster for Cymbal Bank production code"
   #Deploy a two node Kubernetes Engine Cluster called cymbal-bank-prod in us-central1-a.
-  #create_cluster "$CLUSTER_PROD" TODO
+  create_cluster "$CLUSTER_PROD"
 
   gcloud container clusters get-credentials $CLUSTER_PROD --zone $ZONE --project ${PROJECT_ID}
   kubectl apply -f "$K8S"/extras/jwt/jwt-secret.yaml --context=${CTX_1}
@@ -227,7 +231,7 @@ EOF
 }
 
 function t11_create_cloud_build_trigger_deploy_to_prod(){
-  local TASK="Task 10"
+  local TASK="Task 11"
   print "$TASK: Create a Cloud Build template and trigger for deployment to the production cluster"
 
   function cloud_build_sa(){
@@ -539,14 +543,14 @@ EOF
   check_task "$TASK"
 }
 
-print "Part 2: Create CI/CD Pipelines for Production and Development"
-#t9_create_cloud_src_repo TODO
+printh "Part 2: Create CI/CD Pipelines for Production and Development"
+t9_create_cloud_src_repo
 t10_deploy_gke_prod
 t11_create_cloud_build_trigger_deploy_to_prod
 t12_deploy_gke_dev
 t13_create_cloud_build_trigger_deploy_to_dev
 
-print "Part 3: Deploy and Configure Anthos Service Mesh"
+printh "Part 3: Deploy and Configure Anthos Service Mesh"
 t14_create_sa_register_prod_w_hub
 t15_install_asm_to_prod
 t16_conf_ns_for_sidecar_prod
