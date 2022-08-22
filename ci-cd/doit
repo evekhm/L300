@@ -1,4 +1,7 @@
 #!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+K8S="$DIR"/bank-of-anthos
+source "$DIR"/SET
 
 COLOR_RED=$(tput setaf 1)
 COLOR_GREEN=$(tput setaf 2)
@@ -7,24 +10,25 @@ COLOR_BLUE=$(tput setaf 4)
 COLOR_MAGENTA=$(tput setaf 5)
 COLOR_CYAN=$(tput setaf 6)
 COLOR_WHITE=$(tput setaf 7)
+BOLD=$(tput bold)
+
+SEPARATOR="--------------------------------------------------------------------------------------"
 RESET=$(tput sgr0)
 
 check_task(){
   local TASK=$1
-  read -p "✅ ${COLOR_BLUE}check the progress on $TASK and hit ENTER when it is green ${RESET}"
+  read -p "✅ ${COLOR_CYAN} Check the progress on ${BOLD} $TASK  ${RESET} ${COLOR_CYAN}and hit ENTER when it is green ${RESET}"
 }
 
 print(){
-  echo "${COLOR_CYAN}$1${RESET}"
+  echo "${COLOR_CYAN}${SEPARATOR}"
+  echo "$1"
+  echo "${SEPARATOR}${RESET}"
 }
 
 printh(){
   echo "${COLOR_YELLOW}$1${RESET}"
 }
-
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-K8S="$DIR"/bank-of-anthos
-source "$DIR"/SET
 
 function enable_project_apis() {
   APIS="compute.googleapis.com \
@@ -143,14 +147,14 @@ spec:
       terminationGracePeriodSeconds: 5
       containers:
       - name: front
-        image: gcr.io/bank-of-anthos/frontend:v0.4.2
+        image: gcr.io/bank-of-anthos-ci/frontend:v0.5.5
         volumeMounts:
         - name: publickey
           mountPath: "/root/.ssh"
           readOnly: true
         env:
         - name: VERSION
-          value: "v0.4.2"
+          value: "v0.5.5"
         - name: PORT
           value: "8080"
         - name: ENABLE_TRACING
@@ -166,6 +170,9 @@ spec:
         # Customize the bank name used in the header. Defaults to 'Bank of Anthos' - when CYMBAL_LOGO is true, uses 'CymbalBank'
         # - name: BANK_NAME
         #   value: ""
+        # Customize the cluster name if it cannot be retrieved from the metadata server
+        #- name: CLUSTER_NAME
+        #  value: "my-cluster"
         - name: DEFAULT_USERNAME
           valueFrom:
             configMapKeyRef:
@@ -176,6 +183,12 @@ spec:
             configMapKeyRef:
               name: demo-data-config
               key: DEMO_LOGIN_PASSWORD
+        # Customize the metadata server hostname to query for metadata
+        #- name: METADATA_SERVER
+        #  value: "my-metadata-server"
+        # Customize the pod zone if it cannot be retrieved from the metadata server
+        #- name: POD_ZONE
+        #  value: "my-zone"
         envFrom:
         - configMapRef:
             name: environment-config
@@ -200,8 +213,8 @@ spec:
             cpu: 100m
             memory: 64Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 250m
+            memory: 128Mi
       volumes:
       - name: publickey
         secret:
@@ -344,11 +357,10 @@ function create_sa(){
   --iam-account="${CONNECT_SA}"@"${PROJECT_ID}".iam.gserviceaccount.com
 }
 
-function register_prod_w_hub(){
+function register_w_hub(){
   local CLUSTER=$1
     gcloud container hub memberships register "$CLUSTER" \
       --gke-cluster="$ZONE"/"$CLUSTER"  \
-      --enable-workload-identity \
       --service-account-key-file="$DIR"/"${CONNECT_SA}"-key.json
 }
 
@@ -356,18 +368,11 @@ function t14_create_sa_register_prod_w_hub(){
   local TASK="Task 14"
   print "$TASK: Create a Service account and register the production cluster with Container Hub"
   create_sa
-  register_prod_w_hub "$CLUSTER_PROD"
+  register_w_hub "$CLUSTER_PROD"
   #read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
-function t17_register_dev_w_hub(){
-  local TASK="Task 17"
-  print "$TASK: Register the development cluster with Container Hub"
-  register_prod_w_hub "$CLUSTER_PROD"
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
-  check_task "$TASK"
-}
 
 function install_asm(){
   curl https://storage.googleapis.com/csm-artifacts/asm/install_asm_1.11 > install_asm
@@ -394,11 +399,31 @@ function t15_install_asm_to_prod(){
   check_task "$TASK"
 }
 
+function t16_conf_ns_for_sidecar_prod(){
+  local TASK="Task 16"
+  print "$TASK: Configure namespace labels for sidecar injection in the production cluster"
+  kubectl label namespace default istio-injection=enabled istio.io/rev=asm-1112-17 --overwrite --context=${CTX_1}
+  echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
+    All namespaces that required sidecar injection must have an istio.io/rev label
+    that matches the installed Anthos Service Mesh version"
+
+#  read -p "check the progress on $TASK and hit ENTER when it is green"
+  check_task "$TASK"
+}
+
+function t17_register_dev_w_hub(){
+  local TASK="Task 17"
+  print "$TASK: Register the development cluster with Container Hub"
+  register_w_hub "$CLUSTER_DEV"
+#  read -p "check the progress on $TASK and hit ENTER when it is green"
+  check_task "$TASK"
+}
+
 function t18_install_asm_to_dev(){
   local TASK="Task 18"
   print "$TASK: Install Anthos Service Mesh onto the development cluster and configure namespaces"
   install_asm_to_gke "${CLUSTER_DEV}"
-  kubectl label namespace default  istio-injection- istio.io/rev=asm-181-5 --overwrite --context=${CTX_2}
+  kubectl label namespace default istio-injection=enabled istio.io/rev=asm-1112-17 --overwrite --context=${CTX_2}
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
     All namespaces that required sidecar injection must have an istio.io/rev label
     that matches the installed Anthos Service Mesh version"
@@ -406,17 +431,6 @@ function t18_install_asm_to_dev(){
   check_task "$TASK"
 }
 
-function t16_conf_ns_for_sidecar_prod(){
-  local TASK="Task 16"
-  echo "$TASK: Configure namespace labels for sidecar injection in the production cluster"
-  kubectl label namespace default  istio-injection- istio.io/rev=asm-181-5 --overwrite --context=${CTX_1}
-  echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
-    All namespaces that required sidecar injection must have an istio.io/rev label
-    that matches the installed Anthos Service Mesh version"
-
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
-  check_task "$TASK"
-}
 
 function t19_firewall_4_istio_traffic(){
   local TASK="Task 19"
@@ -436,17 +450,6 @@ function t19_firewall_4_istio_traffic(){
   check_task "$TASK"
 }
 
-function t16_conf_ns_for_sidecar_prod(){
-  local TASK="Task 16"
-  print "$TASK: Configure namespace labels for sidecar injection in the production cluster"
-  kubectl label namespace default  istio-injection- istio.io/rev=asm-181-5 --overwrite --context=${CTX_1}
-  echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
-    All namespaces that required sidecar injection must have an istio.io/rev label
-    that matches the installed Anthos Service Mesh version"
-
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
-  check_task "$TASK"
-}
 
 function t20_create_secrets(){
   local TASK="Task 20"
@@ -509,7 +512,7 @@ EOF
 
 function t23_update_istio_rebalance_weights(){
   local TASK="Task 23"
-  print "$TASK:  Update the Istio virtual service definition to rebalance
+  print "$TASK:  Update the Istio virtual service definition to re-balance
     frontend traffic between production and development"
 
   # Configure your VirtualService to distribute 75% of traffic to
