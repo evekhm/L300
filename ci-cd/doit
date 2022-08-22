@@ -11,7 +11,7 @@ RESET=$(tput sgr0)
 
 check_task(){
   local TASK=$1
-  read -p "${COLOR_BLUE}check the progress on $TASK and hit ENTER when it is ${RESET} ${COLOR_GREEN}green ${RESET}"
+  read -p "✅ ${COLOR_BLUE}check the progress on $TASK and hit ENTER when it is green ${RESET}"
 }
 
 print(){
@@ -85,7 +85,6 @@ function t9_create_cloud_src_repo(){
   fi
   git clone https://github.com/GoogleCloudPlatform/bank-of-anthos.git
   cd bank-of-anthos || exit
-  git reset --hard 802d39e17c6bc7ddfe87dde82b94af9aca0e7397
   git config credential.helper gcloud.sh
   git remote add google https://source.developers.google.com/p/${PROJECT_ID}/r/"$REPO"
   git config --global user.email "user1@qwiklabs.net"
@@ -349,6 +348,7 @@ function register_prod_w_hub(){
   local CLUSTER=$1
     gcloud container hub memberships register "$CLUSTER" \
       --gke-cluster="$ZONE"/"$CLUSTER"  \
+      --enable-workload-identity \
       --service-account-key-file="$DIR"/"${CONNECT_SA}"-key.json
 }
 
@@ -381,8 +381,9 @@ function install_asm_to_gke(){
     --cluster_name "${CLUSTER}" \
     --cluster_location "$ZONE" \
     --mode install \
-    --enable_all
+    --enable_all --verbose
 }
+
 
 function t15_install_asm_to_prod(){
   local TASK="Task 15"
@@ -560,7 +561,7 @@ t17_register_dev_w_hub
 t18_install_asm_to_dev
 t19_firewall_4_istio_traffic
 t20_create_secrets
-t21_create_secrets
+t21_restart_all_pods
 t22_create_deploy_istio_gw_vs_prod
 t23_update_istio_rebalance_weights
 
