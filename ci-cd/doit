@@ -1,6 +1,7 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-K8S="$DIR"/bank-of-anthos
+BOA="$DIR"/'bank-of-anthos'
+
 source "$DIR"/SET
 
 COLOR_RED=$(tput setaf 1)
@@ -86,11 +87,11 @@ function t9_create_cloud_src_repo(){
   # and then add your repository as a remote and push your local repository into that remote
   gcloud source repos create $REPO
 
-  if [ -d bank-of-anthos ]; then
-    rm -rf bank-of-anthos
+  if [ -d "$BOA" ]; then
+    rm -rf "$BOA"
   fi
-  git clone https://github.com/GoogleCloudPlatform/bank-of-anthos.git
-  cd bank-of-anthos || exit
+  git clone https://github.com/GoogleCloudPlatform/bank-of-anthos.git "$BOA"
+  cd "$BOA" || exit
   git config credential.helper gcloud.sh
   git remote add google https://source.developers.google.com/p/${PROJECT_ID}/r/"$REPO"
   git config --global user.email "user1@qwiklabs.net"
@@ -109,13 +110,13 @@ function t10_deploy_gke_prod(){
   create_cluster "$CLUSTER_PROD"
 
   gcloud container clusters get-credentials $CLUSTER_PROD --zone $ZONE --project ${PROJECT_ID}
-  kubectl apply -f "$K8S"/extras/jwt/jwt-secret.yaml --context=${CTX_1}
+  kubectl apply -f "$BOA"/extras/jwt/jwt-secret.yaml --context=${CTX_1}
 
   #modify the /kubernetes-manifests/frontend.yaml manifest file to include the labels identifying this as version 1
-  rm "$K8S"/kubernetes-manifests/frontend.yaml
-  cp "$DIR"/frontend.yaml "$K8S"/kubernetes-manifests
+  rm "$BOA"/kubernetes-manifests/frontend.yaml
+  cp "$DIR"/frontend.yaml "$BOA"/kubernetes-manifests
 
-  kubectl apply -f "$K8S"/kubernetes-manifests --context=${CTX_1}
+  kubectl apply -f "$BOA"/kubernetes-manifests --context=${CTX_1}
   check_task "$TASK"
   #read -p "${COLOR_BLUE}check the progress on $TASK and hit ENTER when it is green${RESET}"
 }
@@ -144,7 +145,7 @@ function t11_create_cloud_build_trigger_deploy_to_prod(){
   # delete all pods to force the redeployment to reinitialize all of the component services.
   cloud_build_sa
 
-cat << EOF > "$DIR"/bank-of-anthos/cloudbuild.yaml
+cat << EOF > "$BOA"/cloudbuild.yaml
 steps:
 - name: 'gcr.io/cloud-builders/kubectl'
   args: [ apply, -f, ./kubernetes-manifests ]
@@ -160,7 +161,7 @@ EOF
 
   # create a global (non-regional) Cloud Build Trigger that is fired whenever
   # there's a push to the main branch for your repository.
-  gcloud beta builds triggers create cloud-source-repositories --repo="$REPO" --branch-pattern=master  --build-config="$DIR"/cloudbuild.yaml
+  gcloud beta builds triggers create cloud-source-repositories --repo="$REPO" --branch-pattern=master  --build-config=cloudbuild.yaml
   git add .
   git commit -m "pushing cloudbuild.yaml"
 
@@ -178,9 +179,8 @@ function t12_deploy_gke_dev(){
   # and manually deploy an initial version of the Bank of Anthos application
   # to ensure it is working correctly.
   create_cluster "$CLUSTER_DEV"
-  kubectl apply -f "$K8S"/extras/jwt/jwt-secret.yaml  --context=${CTX_2}
-  kubectl apply -f "$K8S"/kubernetes-manifests --context=${CTX_2}
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
+  kubectl apply -f "$BOA"/extras/jwt/jwt-secret.yaml  --context=${CTX_2}
+#  kubectl apply -f "$BOA"/kubernetes-manifests --context=${CTX_2} will deploy with revision label v1, which is immutable
   check_task "$TASK"
 }
 
@@ -195,14 +195,14 @@ function t13_create_cloud_build_trigger_deploy_to_dev(){
   # (on the next line) from "false" to "true".
   git checkout -b cymbal-dev
 
-  sed -i 's/# - name: CYMBAL_LOGO/- name: CYMBAL_LOGO/g' "$K8S"/kubernetes-manifests/frontend.yaml
-  sed -i 's/#   value: "false"/  value: "true"/g' "$K8S"/kubernetes-manifests/frontend.yaml
-  sed -i 's/cymbal-bank-prod/cymbal-bank-dev/g' "$DIR"/cloudbuild.yaml
+  sed -i 's/# - name: CYMBAL_LOGO/- name: CYMBAL_LOGO/g' "$BOA"/kubernetes-manifests/frontend.yaml
+  sed -i 's/#   value: "false"/  value: "true"/g' "$BOA"/kubernetes-manifests/frontend.yaml
+  sed -i 's/cymbal-bank-prod/cymbal-bank-dev/g' "$BOA"/cloudbuild.yaml
 
   # Also, you must also modify the /kubernetes-manifests/frontend.yaml
   # manifest file to include the labels identifying this as version 2
-  sed -i 's/version: v1/version: v2/g' "$K8S"/kubernetes-manifests/frontend.yaml
-  gcloud beta builds triggers create cloud-source-repositories --repo="$REPO" --branch-pattern=cymbal-dev  --build-config="$DIR"/cloudbuild.yaml
+  sed -i 's/version: v1/version: v2/g' "$BOA"/kubernetes-manifests/frontend.yaml
+  gcloud beta builds triggers create cloud-source-repositories --repo="$REPO" --branch-pattern=cymbal-dev  --build-config=cloudbuild.yaml
   git add .
 
   #Trigger the development pipeline by making a git commit
@@ -350,7 +350,7 @@ function t22_create_deploy_istio_gw_vs_prod(){
   local TASK="Task 22"
   print "$TASK" "Create and deploy an Istio Gateway and Virtual Service on the production cluster"
   # create a dedicated namespace for the Istio Ingress gateway on the production cluster called gateway-namespace
-  kubectl apply -f "$K8S"/istio-manifests/frontend-ingress.yaml --context=${CTX_1}
+  kubectl apply -f "$BOA"/istio-manifests/frontend-ingress.yaml --context=${CTX_1}
 
   kubectl create namespace $GATEWAY_NS
   git clone https://github.com/GoogleCloudPlatform/anthos-service-mesh-packages.git
