@@ -311,7 +311,7 @@ function t15_install_asm_to_prod(){
 function t16_conf_ns_for_sidecar_prod(){
   local TASK="Task 16"
   print "$TASK" "Configure namespace labels for sidecar injection in the production cluster"
-  kubectl label namespace default istio-injection- istio.io/rev=asm-1112-17 --overwrite --context=${CTX_1}
+  kubectl label namespace default istio-injection- istio.io/rev=asm-managed --overwrite --context=${CTX_1}
   kubectl describe namespace default
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
     All namespaces that required sidecar injection must have an istio.io/rev label  that matches the installed Anthos Service Mesh version"
@@ -330,7 +330,8 @@ function t18_install_asm_to_dev(){
   print "$TASK" "Install Anthos Service Mesh onto the development cluster and configure namespaces"
   gcloud container clusters get-credentials ${CLUSTER_DEV} --zone ${ZONE}
   install_asm_to_gke "${CLUSTER_DEV}"
-  kubectl label namespace default istio-injection=enabled istio.io/rev=asm-1112-17 --overwrite --context=${CTX_2}
+  kubectl label namespace default istio-injection- istio.io/rev=asm-managed --overwrite --context=${CTX_2}
+  kubectl describe namespace default
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
     All namespaces that required sidecar injection must have an istio.io/rev label that matches the installed Anthos Service Mesh version"
   check_task "$TASK"
