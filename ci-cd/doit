@@ -144,7 +144,7 @@ function t11_create_cloud_build_trigger_deploy_to_prod(){
   # delete all pods to force the redeployment to reinitialize all of the component services.
   cloud_build_sa
 
-cat << EOF > "$DIR"/cloudbuild.yaml
+cat << EOF > "$DIR"/bank-of-anthos/cloudbuild.yaml
 steps:
 - name: 'gcr.io/cloud-builders/kubectl'
   args: [ apply, -f, ./kubernetes-manifests ]
@@ -158,8 +158,6 @@ steps:
   - 'CLOUDSDK_CONTAINER_CLUSTER=cymbal-bank-prod'
 EOF
 
-  echo "Pushing cloudbuild.yaml..."
-  cat "$DIR"/cloudbuild.yaml
   # create a global (non-regional) Cloud Build Trigger that is fired whenever
   # there's a push to the main branch for your repository.
   gcloud beta builds triggers create cloud-source-repositories --repo="$REPO" --branch-pattern=master  --build-config="$DIR"/cloudbuild.yaml
@@ -212,10 +210,8 @@ function t13_create_cloud_build_trigger_deploy_to_dev(){
   git push --all google
 
   echo "You should now have two versions of the application deployed on separate clusters"
-  echo "The original production version of the application, that displays Bank
-      of Anthos in the header when you connect to the frontend service IP address on the production cluster."
-  echo "The development version, that displays Cymbal Bank in the header when you
-      connect to the frontend service IP address on the development cluster."
+  echo "The original production version of the application, that displays Bank of Anthos in the header when you connect to the frontend service IP address on the production cluster."
+  echo "The development version, that displays Cymbal Bank in the header when you connect to the frontend service IP address on the development cluster."
   #read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 
