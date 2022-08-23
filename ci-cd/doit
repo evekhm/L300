@@ -65,16 +65,25 @@ function setup_network(){
 function create_cluster() {
   NAME=$1
   echo "Creating $NAME cluster"
-  gcloud container clusters create $NAME \
-   --project ${PROJECT_ID} \
-   --zone=$ZONE \
-   --enable-ip-alias \
-   --num-nodes 2 \
-   --machine-type "n1-standard-4"  \
-   --image-type "UBUNTU" \
-   --network default \
-   --subnetwork default \
-   --workload-pool=${WORKLOAD_POOL}
+#  gcloud container clusters create $NAME \
+#   --project ${PROJECT_ID} \
+#   --zone=$ZONE \
+#   --enable-ip-alias \
+#   --num-nodes 2 \
+#   --machine-type "n1-standard-4"  \
+#   --image-type "UBUNTU" \
+#   --network default \
+#   --subnetwork default \
+#   --workload-pool=${WORKLOAD_POOL}
+
+gcloud container clusters create ${NAME} \
+  --project=${PROJECT_ID} \
+  --zone=${ZONE} \
+  --release-channel=regular \
+  --image-type cos_containerd \
+  --machine-type=e2-standard-4 \
+  --num-nodes=2 \
+  --workload-pool=${PROJECT_ID}.svc.id.goog
 }
 
 function t9_create_cloud_src_repo(){
@@ -100,7 +109,6 @@ function t9_create_cloud_src_repo(){
   git commit -m "pushing code"
   git push --all google
   check_task "$TASK"
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
 }
 
 function t10_deploy_gke_prod(){
@@ -118,7 +126,6 @@ function t10_deploy_gke_prod(){
 
   kubectl apply -f "$BOA"/kubernetes-manifests --context=${CTX_1}
   check_task "$TASK"
-  #read -p "${COLOR_BLUE}check the progress on $TASK and hit ENTER when it is green${RESET}"
 }
 
 function t11_create_cloud_build_trigger_deploy_to_prod(){
@@ -167,8 +174,6 @@ EOF
 
   echo "Triggering the production pipeline by making a git commit and git push to the main branch..."
   git push --all google  #Push all branches
-
-  #read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
@@ -212,7 +217,6 @@ function t13_create_cloud_build_trigger_deploy_to_dev(){
   echo "You should now have two versions of the application deployed on separate clusters"
   echo "The original production version of the application, that displays Bank of Anthos in the header when you connect to the frontend service IP address on the production cluster."
   echo "The development version, that displays Cymbal Bank in the header when you connect to the frontend service IP address on the development cluster."
-  #read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 
 }
@@ -234,7 +238,9 @@ function register_w_hub(){
   local CLUSTER=$1
     gcloud container hub memberships register "$CLUSTER" \
       --gke-cluster="$ZONE"/"$CLUSTER"  \
-      --service-account-key-file="$DIR"/"${CONNECT_SA}"-key.json
+      --enable-workload-identity
+#      --service-account-key-file="$DIR"/"${CONNECT_SA}"-key.json
+  gcloud container hub memberships list
 }
 
 function t14_create_sa_register_prod_w_hub(){
@@ -242,46 +248,73 @@ function t14_create_sa_register_prod_w_hub(){
   print "$TASK" "Create a Service account and register the production cluster with Container Hub"
   create_sa
   register_w_hub "$CLUSTER_PROD"
-  #read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
+ASMCLI_BINARY="./asmcli"
+ASMCLI_BINARY_SHA="./asmcli.sha256 "
 
 function install_asm(){
-  curl https://storage.googleapis.com/csm-artifacts/asm/install_asm_1.11 > install_asm
-  chmod +x install_asm
+  echo "⬇️ Installing the ASM installation tool..."
+  # https://cloud.google.com/service-mesh/docs/managed/configure-managed-anthos-service-mesh#download_the_installation_tool
+  curl \
+    --location \
+    --output ${ASMCLI_BINARY} \
+    --show-error \
+    --silent \
+    https://storage.googleapis.com/csm-artifacts/asm/asmcli
+
+  curl \
+    --location \
+    --output ${ASMCLI_BINARY_SHA} \
+    --show-error \
+    --silent https://storage.googleapis.com/csm-artifacts/asm/asmcli.sha256
+
+  sha256sum -c --ignore-missing ${ASMCLI_BINARY_SHA}
+  chmod +x ${ASMCLI_BINARY}
 }
 
 function install_asm_to_gke(){
   local CLUSTER=$1
-  ./install_asm \
-    --project_id "${PROJECT_ID}" \
-    --cluster_name "${CLUSTER}" \
-    --cluster_location "$ZONE" \
-    --mode install \
-    --output_dir "$DIR\asm_output" \
-    --enable_all --verbose
+#  ./install_asm \
+#    --project_id $PROJECT_ID \
+#    --cluster_name "${CLUSTER}" \
+#    --cluster_location "$ZONE" \
+#    --mode install \
+#    --output_dir "$DIR\asm_output" \
+#    --enable_all --verbose
+#
+  echo "🕸 Installing ASM on $CLUSTER..."
+  # https://cloud.google.com/service-mesh/docs/managed/configure-managed-anthos-service-mesh#apply_the_google-managed_control_plane
+  ${ASMCLI_BINARY} install \
+    --channel regular \
+    --cluster_location ${ZONE} \
+    --cluster_name ${CLUSTER} \
+    --enable-all \
+    --fleet_id ${PROJECT_ID} \
+    --managed \
+    --output_dir asm-${CLUSTER} \
+    --project_id ${PROJECT_ID} \
+    --verbose
 }
 
 
 function t15_install_asm_to_prod(){
   local TASK="Task 15"
   print "$TASK" "Install Anthos Service Mesh onto the production cluster"
+  gcloud container clusters get-credentials ${CLUSTER_PROD} --zone ${ZONE}
   install_asm
   install_asm_to_gke "${CLUSTER_PROD}"
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
 function t16_conf_ns_for_sidecar_prod(){
   local TASK="Task 16"
   print "$TASK" "Configure namespace labels for sidecar injection in the production cluster"
-  kubectl label namespace default istio-injection=enabled istio.io/rev=asm-1112-17 --overwrite --context=${CTX_1}
+  kubectl label namespace default istio-injection- istio.io/rev=asm-1112-17 --overwrite --context=${CTX_1}
+  kubectl describe namespace default
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
-    All namespaces that required sidecar injection must have an istio.io/rev label
-    that matches the installed Anthos Service Mesh version"
-
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
+    All namespaces that required sidecar injection must have an istio.io/rev label  that matches the installed Anthos Service Mesh version"
   check_task "$TASK"
 }
 
@@ -289,19 +322,17 @@ function t17_register_dev_w_hub(){
   local TASK="Task 17"
   print "$TASK" "Register the development cluster with Container Hub"
   register_w_hub "$CLUSTER_DEV"
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
 function t18_install_asm_to_dev(){
   local TASK="Task 18"
   print "$TASK" "Install Anthos Service Mesh onto the development cluster and configure namespaces"
+  gcloud container clusters get-credentials ${CLUSTER_DEV} --zone ${ZONE}
   install_asm_to_gke "${CLUSTER_DEV}"
   kubectl label namespace default istio-injection=enabled istio.io/rev=asm-1112-17 --overwrite --context=${CTX_2}
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
-    All namespaces that required sidecar injection must have an istio.io/rev label
-    that matches the installed Anthos Service Mesh version"
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
+    All namespaces that required sidecar injection must have an istio.io/rev label that matches the installed Anthos Service Mesh version"
   check_task "$TASK"
 }
 
@@ -320,7 +351,6 @@ function t19_firewall_4_istio_traffic(){
   gcloud compute --project=${PROJECT_ID} firewall-rules create allow-istio \
     --direction=INGRESS --priority=1000 --network=default --action=ALLOW \
     --rules=all --source-ranges=10.128.0.0/20,${POD_IP_CIDR_1},${POD_IP_CIDR_2}
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
@@ -333,7 +363,6 @@ function t20_create_secrets(){
   # perform service discovery and other tasks on the development cluster and vice-versa.
   istioctl x create-remote-secret --context=${CTX_1} --name="$CLUSTER_PROD" | kubectl apply -f - --context=${CTX_2}
   istioctl x create-remote-secret --context=${CTX_2} --name="$CLUSTER_DEV" | kubectl apply -f - --context=${CTX_1}
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
@@ -384,7 +413,6 @@ EOF
   development versions of the application as you refresh the page"
   echo
   echo "Check that the istio ingress has been created and is routing traffic to the applications"
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
@@ -421,7 +449,6 @@ spec:
      weight: 25
 EOF
   kubectl apply -f ingress-virtual-service.yaml --context=${CTX_1}
-#  read -p "check the progress on $TASK and hit ENTER when it is green"
   check_task "$TASK"
 }
 
