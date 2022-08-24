@@ -9,7 +9,7 @@ if [ -z "$TASK_START" ]; then
 fi
 
 source "$DIR"/SET
-
+REVISION='1.11'
 COLOR_RED=$(tput setaf 1)
 COLOR_GREEN=$(tput setaf 2)
 COLOR_YELLOW=$(tput setaf 3)
@@ -264,7 +264,11 @@ function t14_create_sa_register_prod_w_hub(){
 ASMCLI_BINARY="./asmcli"
 ASMCLI_BINARY_SHA="./asmcli.sha256 "
 
-function install_asm(){
+function download_asm_v11(){
+  curl https://storage.googleapis.com/csm-artifacts/asm/asmcli_$REVISION > asmcli
+  chmod +x asmcli
+}
+function download_asm_new(){
   echo "⬇️ Installing the ASM installation tool..."
   # https://cloud.google.com/service-mesh/docs/managed/configure-managed-anthos-service-mesh#download_the_installation_tool
   curl \
@@ -272,7 +276,7 @@ function install_asm(){
     --output ${ASMCLI_BINARY} \
     --show-error \
     --silent \
-    https://storage.googleapis.com/csm-artifacts/asm/asmcli
+    https://storage.googleapis.com/csm-artifacts/asm/asmcli_$REVISION
 
   curl \
     --location \
@@ -286,34 +290,41 @@ function install_asm(){
 
 function install_asm_to_gke(){
   local CLUSTER=$1
-#  ./install_asm \
-#    --project_id $PROJECT_ID \
-#    --cluster_name "${CLUSTER}" \
-#    --cluster_location "$ZONE" \
-#    --mode install \
-#    --output_dir "$DIR\asm_output" \
-#    --enable_all --verbose
-#
-  echo "🕸 Installing ASM on $CLUSTER..."
-  # https://cloud.google.com/service-mesh/docs/managed/configure-managed-anthos-service-mesh#apply_the_google-managed_control_plane
-  ${ASMCLI_BINARY} install \
-    --channel regular \
-    --cluster_location ${ZONE} \
-    --cluster_name ${CLUSTER} \
-    --enable-all \
-    --fleet_id ${PROJECT_ID} \
-    --managed \
-    --output_dir asm-${CLUSTER} \
-    --project_id ${PROJECT_ID} \
-    --verbose
-}
 
+  echo "🕸 Installing ASM on $CLUSTER..."
+  ./asmcli validate \
+    --project_id $PROJECT_ID \
+    --cluster_name $CLUSTER \
+    --cluster_location $ZONE \
+    --fleet_id $PROJECT_ID \
+    --output_dir ./asm_output
+
+  ./asmcli install \
+    --project_id $PROJECT_ID \
+    --cluster_name $CLUSTER \
+    --cluster_location $ZONE \
+    --fleet_id $PROJECT_ID \
+    --output_dir ./asm_output \
+    --enable_all
+
+#  # https://cloud.google.com/service-mesh/docs/managed/configure-managed-anthos-service-mesh#apply_the_google-managed_control_plane
+#  ${ASMCLI_BINARY} install \
+#    --channel regular \
+#    --cluster_location ${ZONE} \
+#    --cluster_name ${CLUSTER} \
+#    --enable-all \
+#    --fleet_id ${PROJECT_ID} \
+#    --managed \
+#    --output_dir asm-${CLUSTER} \
+#    --project_id ${PROJECT_ID} \
+#    --verbose
+}
 
 function t15_install_asm_to_prod(){
   local TASK="Task 15"
   print "$TASK" "Install Anthos Service Mesh onto the production cluster"
   gcloud container clusters get-credentials ${CLUSTER_PROD} --zone ${ZONE}
-  install_asm
+  download_asm_v11
   install_asm_to_gke "${CLUSTER_PROD}"
   check_task "$TASK"
 }
@@ -321,8 +332,13 @@ function t15_install_asm_to_prod(){
 function t16_conf_ns_for_sidecar_prod(){
   local TASK="Task 16"
   print "$TASK" "Configure namespace labels for sidecar injection in the production cluster"
-  kubectl label namespace default istio-injection- istio.io/rev=asm-managed --overwrite --context=${CTX_1}
-  kubectl describe namespace default
+  #kubectl label namespace default istio-injection- istio.io/rev=asm-managed --overwrite --context=${CTX_1}
+
+  REVISION=$(kubectl get deploy -n istio-system -l app=istiod -o \
+    jsonpath={.items[*].metadata.labels.'istio\.io\/rev'}'{"\n"}')
+  kubectl label namespace default istio-injection- istio.io/rev=$REVISION --overwrite --context=${CTX_1}
+
+  kubectl describe namespace default --context=${CTX_1}
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
     All namespaces that required sidecar injection must have an istio.io/rev label  that matches the installed Anthos Service Mesh version"
   check_task "$TASK"
@@ -340,8 +356,13 @@ function t18_install_asm_to_dev(){
   print "$TASK" "Install Anthos Service Mesh onto the development cluster and configure namespaces"
   gcloud container clusters get-credentials ${CLUSTER_DEV} --zone ${ZONE}
   install_asm_to_gke "${CLUSTER_DEV}"
-  kubectl label namespace default istio-injection- istio.io/rev=asm-managed --overwrite --context=${CTX_2}
-  kubectl describe namespace default
+  #kubectl label namespace default istio-injection- istio.io/rev=asm-managed --overwrite --context=${CTX_2}
+
+  REVISION=$(kubectl get deploy -n istio-system -l app=istiod -o \
+    jsonpath={.items[*].metadata.labels.'istio\.io\/rev'}'{"\n"}')
+  kubectl label namespace default istio-injection- istio.io/rev=$REVISION --overwrite --context=${CTX_2}
+
+  kubectl describe namespace default --context=${CTX_2}
   echo "Ensure that the namespace is correctly labelled for Istio sidecar injection.
     All namespaces that required sidecar injection must have an istio.io/rev label that matches the installed Anthos Service Mesh version"
   check_task "$TASK"
@@ -394,7 +415,12 @@ function t22_create_deploy_istio_gw_vs_prod(){
 
   kubectl create namespace $GATEWAY_NS --context=${CTX_1}
   git clone https://github.com/GoogleCloudPlatform/anthos-service-mesh-packages.git
-  kubectl label namespace $GATEWAY_NS istio.io/rev=asm-managed --overwrite
+#  kubectl label namespace $GATEWAY_NS istio.io/rev=asm-managed --overwrite
+#
+  REVISION=$(kubectl get deploy -n istio-system -l app=istiod -o \
+    jsonpath={.items[*].metadata.labels.'istio\.io\/rev'}'{"\n"}')
+  kubectl label namespace $GATEWAY_NS istio.io/rev=$REVISION --overwrite --context=${CTX_1}
+
   kubectl apply -n $GATEWAY_NS   -f anthos-service-mesh-packages/samples/gateways/istio-ingressgateway --context=${CTX_1}
 
   # deploy an Istio ingress gateway called istio-ingressgateway on the production cluster

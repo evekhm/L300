@@ -181,9 +181,9 @@ function t6_gen_mgctl_artefacts(){
   # Execute the VM migration plan
   echo "Begin the VM migration: (Note this may take upto 10min)..."
   migctl migration generate-artifacts "$MIGRATION_JOB"
-  echo migctl migration status "$MIGRATION_JOB" -v
-  read -p "Please wait till Artefacts are Generated. Run following command in the second terminal: "
-  echo migctl migration status "$MIGRATION_JOB" -v
+  migctl migration status "$MIGRATION_JOB"
+  echo "Please wait till Jobs Status becomes Completed (from Running) by running following command in the second terminal"
+  echo migctl migration status "$MIGRATION_JOB"
   check_task "$TASK"
 }
 

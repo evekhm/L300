@@ -14,4 +14,4 @@ export REPO='cymbal-bank-repo'
 #Service Account to GKE Hub connect
 export CONNECT_SA='connect-sa'
 
-export GATEWAY_NS='istio-gateway'
+export GATEWAY_NS='gateway-namespace'
