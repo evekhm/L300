@@ -1,7 +1,12 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BOA="$DIR"/'bank-of-anthos'
+TASK_START=$1
+if [ -z "$TASK_START" ]; then
+  TASK_START=9
+fi
 
+LOG="$DIR"/log
 source "$DIR"/SET
 
 COLOR_RED=$(tput setaf 1)
@@ -16,8 +21,12 @@ BOLD=$(tput bold)
 SEPARATOR="--------------------------------------------------------------------------------------"
 RESET=$(tput sgr0)
 
+#Clear Log
+echo date > $LOG
 check_task(){
   local TASK=$1
+  DT=$(date '+%H:%M:%S')
+  echo "Completed $TASK   $DT"  >> $LOG
   read -p "✅ ${COLOR_CYAN} Check the progress on ${BOLD} $TASK ${RESET}${COLOR_CYAN}and hit ENTER when it is green ${RESET}"
 }
 
@@ -453,25 +462,65 @@ EOF
   check_task "$TASK"
 }
 
-printh "Part 2: Create CI/CD Pipelines for Production and Development"
-enable_project_apis
-setup_network
-t9_create_cloud_src_repo
-t10_deploy_gke_prod
-t11_create_cloud_build_trigger_deploy_to_prod
-t12_deploy_gke_dev
-t13_create_cloud_build_trigger_deploy_to_dev
+function run_task(){
+  local TASK=$1
+  case $TASK in
+    '9')
+        enable_project_apis
+        setup_network
+        t9_create_cloud_src_repo
+      ;;
+    '10')
+        t10_deploy_gke_prod
+      ;;
+    '11')
+        t11_create_cloud_build_trigger_deploy_to_prod
+      ;;
+    '12')
+        t12_deploy_gke_dev
+      ;;
+    '13')
+        t13_create_cloud_build_trigger_deploy_to_dev
+      ;;
+    '14')
+        t14_create_sa_register_prod_w_hub
+      ;;
+    '15')
+        t15_install_asm_to_prod
+      ;;
+    '16')
+        t16_conf_ns_for_sidecar_prod
+      ;;
+    '17')
+        t17_register_dev_w_hub
+      ;;
+    '18')
+        t18_install_asm_to_dev
+      ;;
+    '19')
+        t19_firewall_4_istio_traffic
+      ;;
+    '20')
+        t20_create_secrets
+      ;;
+    '21')
+        t21_restart_all_pods
+      ;;
+    '22')
+        t22_create_deploy_istio_gw_vs_prod
+      ;;
+    '23')
+        t23_update_istio_rebalance_weights
+      ;;
 
-printh "Part 3: Deploy and Configure Anthos Service Mesh"
-t14_create_sa_register_prod_w_hub
-t15_install_asm_to_prod
-t16_conf_ns_for_sidecar_prod
-t17_register_dev_w_hub
-t18_install_asm_to_dev
-t19_firewall_4_istio_traffic
-t20_create_secrets
-t21_restart_all_pods
-t22_create_deploy_istio_gw_vs_prod
-t23_update_istio_rebalance_weights
+    *)
+      echo -n "unknown"
+      ;;
+  esac
+}
 
+from="$TASK_START" to="23"
+for c in $(eval "echo {$from..$to}"); do run_task "$c"; done
+
+echo date >> "$LOG"
 echo "Congratulations, all completed!."
