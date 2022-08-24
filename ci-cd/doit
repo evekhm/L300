@@ -268,6 +268,7 @@ function download_asm_v11(){
   curl https://storage.googleapis.com/csm-artifacts/asm/asmcli_1.11 > asmcli
   chmod +x asmcli
 }
+
 function download_asm_new(){
   echo "⬇️ Installing the ASM installation tool..."
   # https://cloud.google.com/service-mesh/docs/managed/configure-managed-anthos-service-mesh#download_the_installation_tool
@@ -292,12 +293,12 @@ function install_asm_to_gke(){
   local CLUSTER=$1
 
   echo "🕸 Installing ASM on $CLUSTER..."
-  ./asmcli validate \
-    --project_id $PROJECT_ID \
-    --cluster_name $CLUSTER \
-    --cluster_location $ZONE \
-    --fleet_id $PROJECT_ID \
-    --output_dir ./asm_output_$CLUSTER
+#  ./asmcli validate \
+#    --project_id $PROJECT_ID \
+#    --cluster_name $CLUSTER \
+#    --cluster_location $ZONE \
+#    --fleet_id $PROJECT_ID \
+#    --output_dir ./asm_output_$CLUSTER
 
   ./asmcli install \
     --project_id $PROJECT_ID \
@@ -423,7 +424,7 @@ function t22_create_deploy_istio_gw_vs_prod(){
   kubectl apply -n $GATEWAY_NS   -f anthos-service-mesh-packages/samples/gateways/istio-ingressgateway --context=${CTX_1}
 
   echo "Wait for LoadBalancer to be deployed by running below command in the second terminal"
-  echo "kubectl get svc istio-ingressgateway -w"
+  echo "kubectl get svc istio-ingressgateway -n $GATEWAY_NS --context=${CTX_1} -w"
   read -p "Hit ENTER to continue"
 
   # deploy an Istio ingress gateway called istio-ingressgateway on the production cluster
