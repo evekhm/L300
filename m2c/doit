@@ -33,8 +33,10 @@ check_task(){
 }
 
 print(){
+  TASK=$1
+  DESC=$2
   echo "${COLOR_CYAN}${SEPARATOR}"
-  echo "$1"
+  echo " ${BOLD}${TASK}:${RESET} ${COLOR_CYAN}${DESC}"
   echo "${SEPARATOR}${RESET}"
 }
 
@@ -44,7 +46,7 @@ printh(){
 
 function t1_create_processing_cluster(){
   local TASK="Task 1"
-  print "$TASK: Create a Migrate to Containers processing cluster"
+  print "$TASK" "Create a Migrate to Containers processing cluster"
 
   #Start the migration process by creating a single node processing cluster called m4a-processing
   #1. Create a processing cluster
@@ -66,7 +68,7 @@ function t1_create_processing_cluster(){
 
 function t2_init_mgctl(){
   local TASK="Task 2"
-  print "$TASK: Initialize Migrate to Containers on the processing cluster"
+  print "$TASK" "Initialize Migrate to Containers on the processing cluster"
 
   # Stop VM
   echo "Stopping VM $SRC_VM_ID ..."
@@ -107,7 +109,7 @@ function t2_init_mgctl(){
 
 function t3_config_mgctl_for_ce(){
   local TASK="Task 3"
-  print "$TASK: Configure Migrate to Containers for Compute Engine migrations"
+  print "$TASK" "Configure Migrate to Containers for Compute Engine migrations"
   #Create a service account for Compute Engine source migrations
   echo "Creating a service account for Compute Engine source migrations..."
   gcloud iam service-accounts create "$SA_MIGRATE" \
@@ -137,7 +139,7 @@ function t3_config_mgctl_for_ce(){
 
 function t4_create_mgctl(){
   local TASK="Task 4"
-  print "$TASK: Create a Migration for the Ledger Monolith VM"
+  print "$TASK" "Create a Migration for the Ledger Monolith VM"
   #Create a migration plan
   echo "Creating the migration plan..."
   migctl migration create "$MIGRATION_JOB" --source "$SRC_NAME"   --vm-id "$SRC_VM_ID" --type linux-system-container
@@ -149,8 +151,9 @@ function t4_create_mgctl(){
 
 function t5_update_mgctl_plan(){
   local TASK="Task 5"
-  print "$TASK: Update and finalize the Migration Plan"
+  print "$TASK" "Update and finalize the Migration Plan"
   echo "Downloading the migration plan..."
+  gcloud container clusters get-credentials "$CLUSTER" --zone "$ZONE" --project "${PROJECT_ID}"
   migctl migration get "$MIGRATION_JOB"
   read -p "Please wait. Press any key... "$'\n' -n1 -s
 
@@ -173,23 +176,21 @@ function t5_update_mgctl_plan(){
 
 function t6_gen_mgctl_artefacts(){
   local TASK="Task 6"
-  print "$TASK: Generate the Migration artifacts"
+  print "$TASK" "Generate the Migration artifacts"
+  gcloud container clusters get-credentials "$CLUSTER" --zone "$ZONE" --project "${PROJECT_ID}"
   # Execute the VM migration plan
   echo "Begin the VM migration: (Note this may take upto 10min)..."
   migctl migration generate-artifacts "$MIGRATION_JOB"
-
-  echo "Check the migration status:"
-  migctl migration status "$MIGRATION_JOB" -v
-
-  read -p "In a new terminal  run the command below and wait until it ends with Generate artifacts done... "$'\n' -n1 -s
   echo migctl migration status "$MIGRATION_JOB" -v
-  read -p "Please wait till Artefacts are Generated. Press any key... "$'\n' -n1 -s
+  read -p "Please wait till Artefacts are Generated. Run following command in the second terminal: "
+  echo migctl migration status "$MIGRATION_JOB" -v
   check_task "$TASK"
 }
 
 function t7_deploy_artifacts(){
   local TASK="Task 7"
-  print "$TASK: Deploy the generated container artifacts to the Cymbal Bank cluster"
+  print "$TASK" "Deploy the generated container artifacts to the Cymbal Bank cluster"
+  gcloud container clusters get-credentials "$CLUSTER" --zone "$ZONE" --project "${PROJECT_ID}"
   #Deploying the migrated workload
   #Once the migration is complete, get the generated YAML artifacts
   echo "Getting generated artefacts for $MIGRATION_JOB..."
@@ -203,7 +204,7 @@ function t7_deploy_artifacts(){
 
 function t8_update_k8s_components(){
   local TASK="Task 8"
-  print "$TASK: Update the existing Kubernetes components to point to the new containerized ledger service"
+  print "$TASK" "Update the existing Kubernetes components to point to the new containerized ledger service"
   echo "replace all ledger service FQDNS with just  ledgermonolith-service:8080"
   read -p "Hit ENTER to edit the config map"
   kubectl edit configmap service-api-config --context=${CTX_4}
