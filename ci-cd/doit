@@ -393,6 +393,7 @@ function t22_create_deploy_istio_gw_vs_prod(){
 
   kubectl create namespace $GATEWAY_NS --context=${CTX_1}
   git clone https://github.com/GoogleCloudPlatform/anthos-service-mesh-packages.git
+  kubectl label namespace $GATEWAY_NS istio.io/rev=asm-managed --overwrite
   kubectl apply -n $GATEWAY_NS   -f anthos-service-mesh-packages/samples/gateways/istio-ingressgateway --context=${CTX_1}
 
   # deploy an Istio ingress gateway called istio-ingressgateway on the production cluster
@@ -429,7 +430,7 @@ EOF
 function t23_update_istio_rebalance_weights(){
   local TASK="Task 23"
   print "$TASK" "Update the Istio virtual service definition to re-balance
-    frontend traffic between production and development"
+                frontend traffic between production and development"
 
   # Configure your VirtualService to distribute 75% of traffic to
   # the production cluster (v1 frontend) and 25% of traffic to the development cluster (v2 frontend).
