@@ -1,5 +1,13 @@
 #! /bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+LOG="$DIR"/log
+
+TASK_START=$1
+if [ -z "$TASK_START" ]; then
+  TASK_START=1
+fi
+
 source "$DIR"/SET
 
 #set -e # Exit if error is detected during pipeline execution
@@ -10,15 +18,24 @@ COLOR_BLUE=$(tput setaf 4)
 COLOR_MAGENTA=$(tput setaf 5)
 COLOR_CYAN=$(tput setaf 6)
 COLOR_WHITE=$(tput setaf 7)
+BOLD=$(tput bold)
+
+SEPARATOR="--------------------------------------------------------------------------------------"
 RESET=$(tput sgr0)
 
+#Clear Log
+echo $(date) > $LOG
 check_task(){
   local TASK=$1
-  read -p "${COLOR_BLUE}check the progress on $TASK and hit ENTER when it is ${RESET} ${COLOR_GREEN}green ${RESET}"
+  DT=$(date '+%H:%M:%S')
+  echo "Completed $TASK   $DT"  >> $LOG
+  read -p "✅ ${COLOR_CYAN} Check the progress on ${BOLD} $TASK ${RESET}${COLOR_CYAN}and hit ENTER when it is green ${RESET}"
 }
 
 print(){
-  echo "${COLOR_CYAN}$1${RESET}"
+  echo "${COLOR_CYAN}${SEPARATOR}"
+  echo "$1"
+  echo "${SEPARATOR}${RESET}"
 }
 
 printh(){
@@ -197,13 +214,43 @@ function t8_update_k8s_components(){
 }
 
 printh "Part 1: Use Migrate to Containers to containerize a VM and migrate the application to Anthos/GKE"
-t1_create_processing_cluster
-t2_init_mgctl
-t3_config_mgctl_for_ce
-t4_create_mgctl
-t5_update_mgctl_plan
-t6_gen_mgctl_artefacts
-t7_deploy_artifacts
-t8_update_k8s_components
 
+function run_task(){
+  local TASK=$1
+  case $TASK in
+    '1')
+        t1_create_processing_cluster
+      ;;
+    '2')
+        t2_init_mgctl
+      ;;
+    '3')
+        t3_config_mgctl_for_ce
+      ;;
+    '4')
+        t4_create_mgctl
+      ;;
+    '5')
+        t5_update_mgctl_plan
+      ;;
+    '6')
+        t6_gen_mgctl_artefacts
+      ;;
+    '7')
+        t7_deploy_artifacts
+      ;;
+    '8')
+        t8_update_k8s_components
+      ;;
+
+    *)
+      echo -n "unknown"
+      ;;
+  esac
+}
+
+from="$TASK_START" to="8"
+for c in $(eval "echo {$from..$to}"); do run_task "$c"; done
+
+echo date >> "$LOG"
 echo "PART 1 IS DONE!!!!"

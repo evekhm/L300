@@ -1,12 +1,13 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BOA="$DIR"/'bank-of-anthos'
+LOG="$DIR"/log
+
 TASK_START=$1
 if [ -z "$TASK_START" ]; then
   TASK_START=9
 fi
 
-LOG="$DIR"/log
 source "$DIR"/SET
 
 COLOR_RED=$(tput setaf 1)
