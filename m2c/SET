@@ -15,6 +15,7 @@ export SRC_NAME='source-ce'
 export SRC_VM_ID='ledgermonolith-service'
 export D_CLUSTER='cymbal-monolith-cluster'
 
+export GATEWAY_NS='gateway-namespace'
 export WORKLOAD_POOL=${PROJECT_ID}.svc.id.goog
 export CTX_1=gke_${PROJECT_ID}_us-central1-a_cymbal-bank-prod
 export CTX_2=gke_${PROJECT_ID}_us-central1-a_cymbal-bank-dev
