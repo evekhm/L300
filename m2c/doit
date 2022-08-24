@@ -133,6 +133,7 @@ function t3_config_mgctl_for_ce(){
   #Create the migration source:
   echo "Creating the Compute Engine as the migration source..."
   #service account used to create the Compute Engine source
+  gcloud container clusters get-credentials "$CLUSTER" --zone "$ZONE" --project "${PROJECT_ID}"
   migctl source create ce "$SRC_NAME" --project "${PROJECT_ID}" --json-key="$SA_MIGRATE".json
   check_task "$TASK"
 }
