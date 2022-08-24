@@ -22,7 +22,7 @@ SEPARATOR="---------------------------------------------------------------------
 RESET=$(tput sgr0)
 
 #Clear Log
-echo date > $LOG
+echo $(date) > $LOG
 check_task(){
   local TASK=$1
   DT=$(date '+%H:%M:%S')
