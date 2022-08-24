@@ -391,9 +391,9 @@ function t22_create_deploy_istio_gw_vs_prod(){
   # create a dedicated namespace for the Istio Ingress gateway on the production cluster called gateway-namespace
   kubectl apply -f "$BOA"/istio-manifests/frontend-ingress.yaml --context=${CTX_1}
 
-  kubectl create namespace $GATEWAY_NS
+  kubectl create namespace $GATEWAY_NS --context=${CTX_1}
   git clone https://github.com/GoogleCloudPlatform/anthos-service-mesh-packages.git
-  kubectl apply -n $GATEWAY_NS   -f anthos-service-mesh-packages/samples/gateways/istio-ingressgateway
+  kubectl apply -n $GATEWAY_NS   -f anthos-service-mesh-packages/samples/gateways/istio-ingressgateway --context=${CTX_1}
 
   # deploy an Istio ingress gateway called istio-ingressgateway on the production cluster
   export GATEWAY_URL=$(kubectl get svc istio-ingressgateway --context=${CTX_1} \
