@@ -423,10 +423,14 @@ function t22_create_deploy_istio_gw_vs_prod(){
 
   kubectl apply -n $GATEWAY_NS   -f anthos-service-mesh-packages/samples/gateways/istio-ingressgateway --context=${CTX_1}
 
+  echo "Wait for LoadBalancer to be deployed by running below command in the second terminal"
+  echo "kubectl get svc istio-ingressgateway -w"
+  read -p "Hit ENTER to continue"
+
   # deploy an Istio ingress gateway called istio-ingressgateway on the production cluster
   export GATEWAY_URL=$(kubectl get svc istio-ingressgateway --context=${CTX_1} \
     -o=jsonpath='{.status.loadBalancer.ingress[0].ip}' -n $GATEWAY_NS)
-  echo Istio Gateway Load Balancer: http://$GATEWAY_URL
+  echo "Istio Gateway Load Balancer: http://$GATEWAY_URL"
 
 cat << EOF > destinationrule.yaml
 apiVersion: networking.istio.io/v1alpha3
